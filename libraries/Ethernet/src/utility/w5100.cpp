@@ -15,6 +15,23 @@
 // W5100 controller instance
 W5100Class W5100;
 
+const uint8_t W5100_WRITE_FLAG = 0xF0;
+const uint8_t W5100_READ_FLAG = 0x0F;
+
+#ifdef __AVR__
+#define SPI_CONTINUE 0
+#define SPI_LAST     0
+inline static uint8_t _spi_transfer(uint8_t _data, uint8_t _mode) {
+  return SPI.transfer(_data);
+}
+
+#else // ARM
+#define SPI_CS 10
+inline static uint8_t _spi_transfer(uint8_t _data, SPITransferMode _mode) {
+  return SPI.transfer(SPI_CS, _data, _mode);
+}
+#endif
+
 #define SPI_CS 10
 
 #define TX_RX_MAX_BUF_SIZE 2048
@@ -71,6 +88,30 @@ uint16_t W5100Class::getRXReceivedSize(SOCKET s)
   return val;
 }
 
+uint8_t W5100Class::exploratory_modewrite(uint8_t mode_value)
+{
+  SPI.begin();
+
+  setSS();
+  _spi_transfer(W5100_WRITE_FLAG,       SPI_CONTINUE);
+  _spi_transfer(0,                      SPI_CONTINUE);
+  _spi_transfer(0,                      SPI_CONTINUE);
+  _spi_transfer(mode_value, SPI_LAST);
+  resetSS();
+
+  // Read back the value, on W5200 this is interpreted as the first 4
+  // reads from the sequence.
+  setSS();
+  _spi_transfer(W5100_READ_FLAG,        SPI_CONTINUE);
+  _spi_transfer(0,                      SPI_CONTINUE);
+  _spi_transfer(0,                      SPI_CONTINUE);
+  uint8_t result = _spi_transfer(0, SPI_LAST);
+  resetSS();
+  
+  SPI.end();
+
+  return result;
+}
 
 void W5100Class::send_data_processing(SOCKET s, const uint8_t *data, uint16_t len)
 {

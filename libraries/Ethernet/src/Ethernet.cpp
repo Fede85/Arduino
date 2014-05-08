@@ -93,6 +93,16 @@ int EthernetClass::maintain(){
   return rc;
 }
 
+uint8_t EthernetClass::detectWiznetChip()
+{
+  uint8_t is_w5100 = W5100.exploratory_modewrite(W5100.RST) == 0
+    && W5100.exploratory_modewrite(W5100.PINGBLOCK) == W5100.PINGBLOCK
+    && W5100.exploratory_modewrite(W5100.PPOE) == W5100.PPOE
+    && W5100.exploratory_modewrite(W5100.RST|W5100.PPOE) == 0;
+
+    return is_w5100;
+}
+
 IPAddress EthernetClass::localIP()
 {
   IPAddress ret;

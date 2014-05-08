@@ -60,6 +60,12 @@ long lastReadingTime = 0;
 void setup() {
   // start the SPI library:
   SPI.begin();
+  
+  if (Ethernet.detectWiznetChip() == 0) {
+    Serial.println("W5100 module not found!");
+    // don't continue:
+    while (true);
+  }
 
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, ip);

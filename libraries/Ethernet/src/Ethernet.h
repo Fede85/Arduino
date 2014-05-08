@@ -26,6 +26,8 @@ public:
   void begin(uint8_t *mac_address, IPAddress local_ip, IPAddress dns_server, IPAddress gateway);
   void begin(uint8_t *mac_address, IPAddress local_ip, IPAddress dns_server, IPAddress gateway, IPAddress subnet);
   int maintain();
+  
+  uint8_t detectWiznetChip();
 
   IPAddress localIP();
   IPAddress subnetMask();

@@ -66,6 +66,11 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
+  if (Ethernet.detectWiznetChip() == 0) {
+    Serial.println("W5100 module not found!");
+    // don't continue:
+    while (true);
+  }
 
   // give the ethernet module time to boot up:
   delay(1000);

@@ -36,16 +36,22 @@ EthernetServer server(23);
 boolean alreadyConnected = false; // whether or not the client was connected previously
 
 void setup() {
-  // initialize the ethernet device
-  Ethernet.begin(mac, ip, gateway, subnet);
-  // start listening for clients
-  server.begin();
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
+  if (Ethernet.detectWiznetChip() == 0) {
+    Serial.println("W5100 module not found!");
+    // don't continue:
+    while (true);
+  }
+
+  // initialize the ethernet device
+  Ethernet.begin(mac, ip, gateway, subnet);
+  // start listening for clients
+  server.begin();
 
   Serial.print("Chat server address:");
   Serial.println(Ethernet.localIP());

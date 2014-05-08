@@ -38,14 +38,20 @@ IPAddress server(1, 1, 1, 1);
 EthernetClient client;
 
 void setup() {
-  // start the Ethernet connection:
-  Ethernet.begin(mac, ip);
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
+  
+  if (Ethernet.detectWiznetChip() == 0) {
+    Serial.println("W5100 module not found!");
+    // don't continue:
+    while (true);
+  }
 
+  // start the Ethernet connection:
+  Ethernet.begin(mac, ip);
 
   // give the Ethernet shield a second to initialize:
   delay(1000);

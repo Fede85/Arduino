@@ -35,11 +35,21 @@ char  ReplyBuffer[] = "acknowledged";       // a string to send back
 EthernetUDP Udp;
 
 void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Leonardo only
+  }
+
+  if (Ethernet.detectWiznetChip() == 0) {
+    Serial.println("W5100 module not found!");
+    // don't continue:
+    while (true);
+  }
+
   // start the Ethernet and UDP:
   Ethernet.begin(mac, ip);
   Udp.begin(localPort);
-
-  Serial.begin(9600);
 }
 
 void loop() {

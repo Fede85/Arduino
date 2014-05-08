@@ -188,6 +188,7 @@ public:
   uint16_t getTXFreeSize(SOCKET s);
   uint16_t getRXReceivedSize(SOCKET s);
   
+  uint8_t exploratory_modewrite(uint8_t mode_value);
 
   // W5100 Registers
   // ---------------
@@ -243,6 +244,10 @@ public:
 #undef __GP_REGISTER8
 #undef __GP_REGISTER16
 #undef __GP_REGISTER_N
+
+  static const uint8_t  RST = 1<<7; // Mode reset BIT
+  static const uint8_t  PINGBLOCK = 1<<4; // Mode reset BIT
+  static const uint8_t  PPOE = 1<<3; // Mode reset BIT
 
   // W5100 Socket registers
   // ----------------------
@@ -309,8 +314,6 @@ public:
 
 
 private:
-  static const uint8_t  RST = 7; // Reset BIT
-
   static const int SOCKETS = 4;
   static const uint16_t SMASK = 0x07FF; // Tx buffer MASK
   static const uint16_t RMASK = 0x07FF; // Rx buffer MASK
