@@ -91,6 +91,7 @@ uint16_t W5100Class::getRXReceivedSize(SOCKET s)
 uint8_t W5100Class::exploratory_modewrite(uint8_t mode_value)
 {
   SPI.begin();
+  initSS();
 
   setSS();
   _spi_transfer(W5100_WRITE_FLAG,       SPI_CONTINUE);
@@ -109,7 +110,7 @@ uint8_t W5100Class::exploratory_modewrite(uint8_t mode_value)
   resetSS();
   
   SPI.end();
-
+  
   return result;
 }
 
