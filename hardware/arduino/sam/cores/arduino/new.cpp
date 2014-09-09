@@ -8,7 +8,7 @@
 
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
   See the GNU Lesser General Public License for more details.
 
   You should have received a copy of the GNU Lesser General Public
@@ -16,15 +16,21 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef NEW_H
-#define NEW_H
-
 #include <stdlib.h>
 
-void * operator new(size_t size);
-void * operator new[](size_t size);
-void operator delete(void * ptr);
-void operator delete[](void * ptr);
+void *operator new(size_t size) {
+  return malloc(size);
+}
 
-#endif
+void *operator new[](size_t size) {
+  return malloc(size);
+}
+
+void operator delete(void * ptr) {
+  free(ptr);
+}
+
+void operator delete[](void * ptr) {
+  free(ptr);
+}
 
