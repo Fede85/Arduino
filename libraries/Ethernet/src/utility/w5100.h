@@ -133,10 +133,20 @@ public:
   static const uint8_t RAW  = 255;
 };
 
-class W5100Class {
+// Abstract base class for both W5100 & W5200
+class  WiznetModule {
+
 
 public:
-  void init();
+  /**
+   * @brief Automatically detect a W5100 or W5200, and return the appropriate instance.
+   *
+   * The returned object will already be initialised, you don't need to call init() on it
+   * Although this won't hurt.
+   */
+  static WiznetModule *autodetect();
+  virtual void init();
+
 
   /**
    * @brief	This function is being used for copy the data form Receive buffer of the chip to application buffer.
@@ -196,37 +206,43 @@ public:
   uint16_t getTXFreeSize(SOCKET s);
   uint16_t getRXReceivedSize(SOCKET s);
   
+protected:
+  // Virtual functions different between W5100 & W5200
+  virtual uint16_t get_chbase() = 0;
+  virtual uint8_t get_max_sockets() = 0;
+  virtual uint16_t get_txbuf_base() = 0;
+  virtual uint16_t get_rxbuf_base() = 0;
+
+  virtual uint8_t write(uint16_t _addr, uint8_t _data) = 0;
+  virtual uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len) = 0;
+  virtual uint8_t read(uint16_t addr) = 0;
+  virtual uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len) = 0;
+
 
   // W5100 Registers
   // ---------------
-private:
-  static uint8_t write(uint16_t _addr, uint8_t _data);
-  static uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
-  static uint8_t read(uint16_t addr);
-  static uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len);
-  
 #define __GP_REGISTER8(name, address)             \
-  static inline void write##name(uint8_t _data) { \
+  inline void write##name(uint8_t _data) { \
     write(address, _data);                        \
   }                                               \
-  static inline uint8_t read##name() {            \
+  inline uint8_t read##name() {            \
     return read(address);                         \
   }
 #define __GP_REGISTER16(name, address)            \
-  static void write##name(uint16_t _data) {       \
+  inline void write##name(uint16_t _data) {       \
     write(address,   _data >> 8);                 \
     write(address+1, _data & 0xFF);               \
   }                                               \
-  static uint16_t read##name() {                  \
+  inline uint16_t read##name() {                  \
     uint16_t res = read(address);                 \
     res = (res << 8) + read(address + 1);         \
     return res;                                   \
   }
 #define __GP_REGISTER_N(name, address, size)      \
-  static uint16_t write##name(uint8_t *_buff) {   \
+  inline uint16_t write##name(uint8_t *_buff) {   \
     return write(address, _buff, size);           \
   }                                               \
-  static uint16_t read##name(uint8_t *_buff) {    \
+  inline uint16_t read##name(uint8_t *_buff) {    \
     return read(address, _buff, size);            \
   }
 
@@ -240,54 +256,50 @@ public:
   __GP_REGISTER8 (IMR,    0x0016);    // Interrupt Mask
   __GP_REGISTER16(RTR,    0x0017);    // Timeout address
   __GP_REGISTER8 (RCR,    0x0019);    // Retry count
-  __GP_REGISTER8 (RMSR,   0x001A);    // Receive memory size
-  __GP_REGISTER8 (TMSR,   0x001B);    // Transmit memory size
   __GP_REGISTER8 (PATR,   0x001C);    // Authentication type address in PPPoE mode
   __GP_REGISTER8 (PTIMER, 0x0028);    // PPP LCP Request Timer
   __GP_REGISTER8 (PMAGIC, 0x0029);    // PPP LCP Magic Number
-  __GP_REGISTER_N(UIPR,   0x002A, 4); // Unreachable IP address in UDP mode
-  __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode
-  
-#undef __GP_REGISTER8
-#undef __GP_REGISTER16
-#undef __GP_REGISTER_N
+
+  static const uint8_t  RST = 1<<7; // Mode reset BIT
+  static const uint8_t  PINGBLOCK = 1<<4; // Mode reset BIT
+  static const uint8_t  PPOE = 1<<3; // Mode reset BIT
 
   // W5100 Socket registers
   // ----------------------
 private:
-  static inline uint8_t readSn(SOCKET _s, uint16_t _addr);
-  static inline uint8_t writeSn(SOCKET _s, uint16_t _addr, uint8_t _data);
-  static inline uint16_t readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
-  static inline uint16_t writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  inline uint8_t readSn(SOCKET _s, uint16_t _addr);
+  inline uint8_t writeSn(SOCKET _s, uint16_t _addr, uint8_t _data);
+  inline uint16_t readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  inline uint16_t writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
 
-  static const uint16_t CH_BASE = 0x0400;
   static const uint16_t CH_SIZE = 0x0100;
 
+  static uint8_t exploratory_modewrite(uint8_t);
+
+private:
+
 #define __SOCKET_REGISTER8(name, address)                    \
-  static inline void write##name(SOCKET _s, uint8_t _data) { \
+  inline void write##name(SOCKET _s, uint8_t _data) { \
     writeSn(_s, address, _data);                             \
   }                                                          \
-  static inline uint8_t read##name(SOCKET _s) {              \
+  inline uint8_t read##name(SOCKET _s) {              \
     return readSn(_s, address);                              \
   }
 #define __SOCKET_REGISTER16(name, address)                   \
-  static void write##name(SOCKET _s, uint16_t _data) {       \
+  inline void write##name(SOCKET _s, uint16_t _data) {       \
     writeSn(_s, address,   _data >> 8);                      \
     writeSn(_s, address+1, _data & 0xFF);                    \
   }                                                          \
-  static uint16_t read##name(SOCKET _s) {                    \
+  inline uint16_t read##name(SOCKET _s) {                    \
     uint16_t res = readSn(_s, address);                      \
-    uint16_t res2 = readSn(_s,address + 1);                  \
-    res = res << 8;                                          \
-    res2 = res2 & 0xFF;                                      \
-    res = res | res2;                                        \
+    res = (res << 8) + readSn(_s, address + 1);              \
     return res;                                              \
   }
 #define __SOCKET_REGISTER_N(name, address, size)             \
-  static uint16_t write##name(SOCKET _s, uint8_t *_buff) {   \
+  inline uint16_t write##name(SOCKET _s, uint8_t *_buff) {   \
     return writeSn(_s, address, _buff, size);                \
   }                                                          \
-  static uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
+  inline uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
     return readSn(_s, address, _buff, size);                 \
   }
   
@@ -317,19 +329,22 @@ public:
 
 
 private:
-  static const uint8_t  RST = 7; // Reset BIT
-
-  static const int SOCKETS = 4;
   static const uint16_t SMASK = 0x07FF; // Tx buffer MASK
   static const uint16_t RMASK = 0x07FF; // Rx buffer MASK
 public:
   static const uint16_t SSIZE = 2048; // Max Tx buffer size
 private:
   static const uint16_t RSIZE = 2048; // Max Rx buffer size
-  uint16_t SBASE[SOCKETS]; // Tx buffer base address
-  uint16_t RBASE[SOCKETS]; // Rx buffer base address
 
-private:
+  inline uint16_t get_sock_tx_addr(int socket) {
+    return get_txbuf_base() + SSIZE * socket;
+  }
+
+  inline uint16_t get_sock_rx_addr(int socket) {
+    return get_rxbuf_base() + SSIZE * socket;
+  }
+
+protected:
 #if defined(ARDUINO_ARCH_AVR)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
   inline static void initSS()    { DDRB  |=  _BV(4); };
@@ -351,62 +366,109 @@ private:
 #endif // ARDUINO_ARCH_AVR
 };
 
-extern W5100Class W5100;
+class W5100Module : public WiznetModule {
 
-uint8_t W5100Class::readSn(SOCKET _s, uint16_t _addr) {
-  return read(CH_BASE + _s * CH_SIZE + _addr);
+public:
+  void init();
+
+  // Some registers that exist on W5100 only
+  __GP_REGISTER_N(UIPR,   0x002A, 4); // Unreachable IP address in UDP mode
+  __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode
+  __GP_REGISTER8 (RMSR,   0x001A);    // Receive memory size
+  __GP_REGISTER8 (TMSR,   0x001B);    // Transmit memory size
+protected:
+  uint16_t get_chbase() { return 0x0400; }
+  uint8_t get_max_sockets() { return 4; }
+  uint16_t get_txbuf_base() { return 0x4000; }
+  uint16_t get_rxbuf_base() { return 0x6000; }
+
+  uint8_t write(uint16_t _addr, uint8_t _data);
+  uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
+  uint8_t read(uint16_t addr);
+  uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len);
+};
+
+class W5200Module : public WiznetModule {
+public:
+  void init();
+protected:
+  uint16_t get_chbase() { return 0x4000; }
+  uint8_t get_max_sockets() { return 8; }
+  uint16_t get_txbuf_base() { return 0x8000; }
+  uint16_t get_rxbuf_base() { return 0xC000; }
+
+  uint8_t write(uint16_t _addr, uint8_t _data);
+  uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
+  uint8_t read(uint16_t addr);
+  uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len);
+};
+
+
+// Call this function before calling any methods on the W5100 reference below
+// (it will autodetect a W5100 or W5200, and initialise the WiznetModule instance
+// appropriately.)
+void initialise_wiznet_instance();
+
+extern WiznetModule *WiznetInstance;
+
+uint8_t WiznetModule::readSn(SOCKET _s, uint16_t _addr) {
+  return read(get_chbase() + _s * CH_SIZE + _addr);
 }
 
-uint8_t W5100Class::writeSn(SOCKET _s, uint16_t _addr, uint8_t _data) {
-  return write(CH_BASE + _s * CH_SIZE + _addr, _data);
+uint8_t WiznetModule::writeSn(SOCKET _s, uint16_t _addr, uint8_t _data) {
+  return write(get_chbase() + _s * CH_SIZE + _addr, _data);
 }
 
-uint16_t W5100Class::readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
-  return read(CH_BASE + _s * CH_SIZE + _addr, _buf, _len);
+uint16_t WiznetModule::readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
+  return read(get_chbase() + _s * CH_SIZE + _addr, _buf, _len);
 }
 
-uint16_t W5100Class::writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
-  return write(CH_BASE + _s * CH_SIZE + _addr, _buf, _len);
+uint16_t WiznetModule::writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
+  return write(get_chbase() + _s * CH_SIZE + _addr, _buf, _len);
 }
 
-void W5100Class::getGatewayIp(uint8_t *_addr) {
+void WiznetModule::getGatewayIp(uint8_t *_addr) {
   readGAR(_addr);
 }
 
-void W5100Class::setGatewayIp(uint8_t *_addr) {
+void WiznetModule::setGatewayIp(uint8_t *_addr) {
   writeGAR(_addr);
 }
 
-void W5100Class::getSubnetMask(uint8_t *_addr) {
+void WiznetModule::getSubnetMask(uint8_t *_addr) {
   readSUBR(_addr);
 }
 
-void W5100Class::setSubnetMask(uint8_t *_addr) {
+void WiznetModule::setSubnetMask(uint8_t *_addr) {
   writeSUBR(_addr);
 }
 
-void W5100Class::getMACAddress(uint8_t *_addr) {
+void WiznetModule::getMACAddress(uint8_t *_addr) {
   readSHAR(_addr);
 }
 
-void W5100Class::setMACAddress(uint8_t *_addr) {
+void WiznetModule::setMACAddress(uint8_t *_addr) {
   writeSHAR(_addr);
 }
 
-void W5100Class::getIPAddress(uint8_t *_addr) {
+void WiznetModule::getIPAddress(uint8_t *_addr) {
   readSIPR(_addr);
 }
 
-void W5100Class::setIPAddress(uint8_t *_addr) {
+void WiznetModule::setIPAddress(uint8_t *_addr) {
   writeSIPR(_addr);
 }
 
-void W5100Class::setRetransmissionTime(uint16_t _timeout) {
+void WiznetModule::setRetransmissionTime(uint16_t _timeout) {
   writeRTR(_timeout);
 }
 
-void W5100Class::setRetransmissionCount(uint8_t _retry) {
+void WiznetModule::setRetransmissionCount(uint8_t _retry) {
   writeRCR(_retry);
 }
+
+#undef __GP_REGISTER8
+#undef __GP_REGISTER16
+#undef __GP_REGISTER_N
 
 #endif

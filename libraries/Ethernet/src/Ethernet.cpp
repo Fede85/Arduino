@@ -15,10 +15,11 @@ int EthernetClass::begin(uint8_t *mac_address)
 
 
   // Initialise the basic info
-  W5100.init();
+  initialise_wiznet_instance();
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.setMACAddress(mac_address);
-  W5100.setIPAddress(IPAddress(0,0,0,0).raw_address());
+  WiznetInstance->init();
+  WiznetInstance->setMACAddress(mac_address);
+  WiznetInstance->setIPAddress(IPAddress(0,0,0,0).raw_address());
   SPI.endTransaction();
 
   // Now try to get our config info from a DHCP server
@@ -28,9 +29,9 @@ int EthernetClass::begin(uint8_t *mac_address)
     // We've successfully found a DHCP server and got our configuration info, so set things
     // accordingly
     SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    W5100.setIPAddress(_dhcp->getLocalIp().raw_address());
-    W5100.setGatewayIp(_dhcp->getGatewayIp().raw_address());
-    W5100.setSubnetMask(_dhcp->getSubnetMask().raw_address());
+    WiznetInstance->setIPAddress(_dhcp->getLocalIp().raw_address());
+    WiznetInstance->setGatewayIp(_dhcp->getGatewayIp().raw_address());
+    WiznetInstance->setSubnetMask(_dhcp->getSubnetMask().raw_address());
     SPI.endTransaction();
     _dnsServerAddress = _dhcp->getDnsServerIp();
   }
@@ -64,12 +65,13 @@ void EthernetClass::begin(uint8_t *mac_address, IPAddress local_ip, IPAddress dn
 
 void EthernetClass::begin(uint8_t *mac, IPAddress local_ip, IPAddress dns_server, IPAddress gateway, IPAddress subnet)
 {
-  W5100.init();
+  initialise_wiznet_instance();
+	WiznetInstance->init();
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.setMACAddress(mac);
-  W5100.setIPAddress(local_ip.raw_address());
-  W5100.setGatewayIp(gateway.raw_address());
-  W5100.setSubnetMask(subnet.raw_address());
+  WiznetInstance->setMACAddress(mac);
+  WiznetInstance->setIPAddress(local_ip.raw_address());
+  WiznetInstance->setGatewayIp(gateway.raw_address());
+  WiznetInstance->setSubnetMask(subnet.raw_address());
   SPI.endTransaction();
   _dnsServerAddress = dns_server;
 }
@@ -87,9 +89,9 @@ int EthernetClass::maintain(){
       case DHCP_CHECK_REBIND_OK:
         //we might have got a new IP.
         SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-        W5100.setIPAddress(_dhcp->getLocalIp().raw_address());
-        W5100.setGatewayIp(_dhcp->getGatewayIp().raw_address());
-        W5100.setSubnetMask(_dhcp->getSubnetMask().raw_address());
+        WiznetInstance->setIPAddress(_dhcp->getLocalIp().raw_address());
+        WiznetInstance->setGatewayIp(_dhcp->getGatewayIp().raw_address());
+        WiznetInstance->setSubnetMask(_dhcp->getSubnetMask().raw_address());
         SPI.endTransaction();
         _dnsServerAddress = _dhcp->getDnsServerIp();
         break;
@@ -105,7 +107,7 @@ IPAddress EthernetClass::localIP()
 {
   IPAddress ret;
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.getIPAddress(ret.raw_address());
+  WiznetInstance->getIPAddress(ret.raw_address());
   SPI.endTransaction();
   return ret;
 }
@@ -114,7 +116,7 @@ IPAddress EthernetClass::subnetMask()
 {
   IPAddress ret;
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.getSubnetMask(ret.raw_address());
+  WiznetInstance->getSubnetMask(ret.raw_address());
   SPI.endTransaction();
   return ret;
 }
@@ -123,7 +125,7 @@ IPAddress EthernetClass::gatewayIP()
 {
   IPAddress ret;
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.getGatewayIp(ret.raw_address());
+  WiznetInstance->getGatewayIp(ret.raw_address());
   SPI.endTransaction();
   return ret;
 }
